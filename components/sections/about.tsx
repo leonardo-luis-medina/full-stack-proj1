@@ -5,9 +5,11 @@ export default function About() {
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">About Me</h2>
         <p className="text-gray-500 text-center mb-16">A little bit about who I am</p>
         <div className="flex flex-col md:flex-row gap-12 items-center">
-          <div className="w-48 h-48 rounded-full bg-indigo-100 flex items-center justify-center text-6xl flex-shrink-0">
-            ?????
-          </div>
+          <img
+            src="/avatar.jpg"
+            alt="Leonardo"
+            className="w-48 h-48 rounded-full object-cover flex-shrink-0 shadow-md"
+          />
           <div className="space-y-4 text-gray-600">
             <p>Hi! I am Leonardo, a full-stack developer based in the Philippines.</p>
             <p>I have experience with React, Angular, Node.js, ASP.NET Core, PostgreSQL, AWS and Azure.</p>
