@@ -18,9 +18,7 @@ export async function getUploadUrl(filename: string, contentType: string) {
     Key: key,
     ContentType: contentType,
   });
-  const url = await getSignedUrl(r2, command, { expiresIn: 3600 });
-  return {
-    uploadUrl: url,
-    publicUrl: `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${key}`,
-  };
+  const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
+  const publicUrl = `/api/image?key=${encodeURIComponent(key)}`;
+  return { uploadUrl, publicUrl };
 }
