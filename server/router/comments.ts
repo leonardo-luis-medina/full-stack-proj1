@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import Pusher from "pusher";
+import { sendCommentNotification } from "@/lib/resend";
 
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID!,
@@ -40,6 +41,10 @@ export const commentsRouter = router({
         include: { author: true },
       });
       await pusher.trigger("comments", "new-comment", comment);
+      await sendCommentNotification({
+        authorName: comment.author.name ?? "Someone",
+        body: comment.body,
+      });
       return comment;
     }),
 
