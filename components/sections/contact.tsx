@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { trpc } from "@/lib/trpc";
+import Pusher from "pusher-js";
 
 export default function Contact() {
   const { data: session } = useSession();
@@ -19,6 +20,19 @@ export default function Contact() {
   const deleteComment = trpc.comments.delete.useMutation({
     onSuccess: () => refetch(),
   });
+
+  useEffect(() => {
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+    const channel = pusher.subscribe("comments");
+    channel.bind("new-comment", () => refetch());
+    channel.bind("delete-comment", () => refetch());
+    return () => {
+      channel.unbind_all();
+      pusher.disconnect();
+    };
+  }, []);
 
   const handleSubmit = () => {
     if (!comment.trim()) return;

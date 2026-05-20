@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
+import Pusher from "pusher";
+
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.PUSHER_CLUSTER!,
+  useTLS: true,
+});
 
 export const commentsRouter = router({
   getAll: publicProcedure
@@ -30,6 +39,7 @@ export const commentsRouter = router({
         },
         include: { author: true },
       });
+      await pusher.trigger("comments", "new-comment", comment);
       return comment;
     }),
 
@@ -46,6 +56,8 @@ export const commentsRouter = router({
       ) {
         throw new Error("Not authorized");
       }
-      return prisma.comment.delete({ where: { id: input.id } });
+      const deleted = await prisma.comment.delete({ where: { id: input.id } });
+      await pusher.trigger("comments", "delete-comment", { id: input.id });
+      return deleted;
     }),
 });
