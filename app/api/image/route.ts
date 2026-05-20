@@ -2,6 +2,7 @@ import { r2 } from "@/lib/r2";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const key = searchParams.get("key");
@@ -12,8 +13,8 @@ export async function GET(req: Request) {
   });
   const { Body, ContentType } = await r2.send(command);
   const arr = await Body?.transformToByteArray();
-  const buffer = Buffer.from(arr ?? []);
-  return new NextResponse(buffer as unknown as BodyInit, {
+  // @ts-ignore
+  return new NextResponse(arr, {
     headers: { "Content-Type": ContentType ?? "image/png" },
   });
 }
