@@ -11,8 +11,9 @@ export async function GET(req: Request) {
     Key: key,
   });
   const { Body, ContentType } = await r2.send(command);
-  const bytes = await Body?.transformToByteArray();
-  return new NextResponse(bytes, {
+  const arr = await Body?.transformToByteArray();
+  const buffer = Buffer.from(arr ?? []);
+  return new NextResponse(buffer as unknown as BodyInit, {
     headers: { "Content-Type": ContentType ?? "image/png" },
   });
 }
