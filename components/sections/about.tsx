@@ -1,136 +1,194 @@
-const experience = [
-  {
-    role: "Associate Software Engineer",
-    company: "Accenture",
-    period: "June 2024 - November 2024",
-    bullets: [
-      "Participated in three internal bootcamps: Cloud Foundations, Software Engineering, and ServiceNow.",
-      "Gained knowledge in Cloud fundamentals, basic programming (Java, Python) and IT workflows.",
-      "Developed foundational understanding of Agile workflows, GenAI, COBOL, and software testing principles.",
-    ],
-  },
-  {
-    role: "AWS Re/Start - Cloud Training",
-    company: "Amazon Web Services",
-    period: "July 2025 - November 2025",
-    bullets: [
-      "Full-time cloud training program covering AWS (EC2, S3, VPC, IAM, CloudWatch).",
-      "Gained hands-on experience in Linux, networking, Python, and cloud troubleshooting.",
-    ],
-  },
-  {
-    role: "IT Support Intern",
-    company: "Philippine National Police (Muntinlupa)",
-    period: "January 2023 - August 2023",
-    bullets: [
-      "Provided hardware and technical support to internal teams.",
-      "Supervised over 200 interns and ensured smooth coordination.",
-      "Improved and maintained the organizational database.",
-    ],
-  },
-];
-
-const certifications = [
-  "Professional Civil Service Eligibility (Passed: August 2024)",
-  "Python Developer Certificate - SoloLearn (2025)",
-  "Introduction to SQL Certificate - SoloLearn (2025)",
-  "Introduction to Java Certificate - SoloLearn (2025)",
-  "Web Developer Certificate - SoloLearn (2025)",
-];
-
 export default function About() {
   return (
-    <section id="about" className="py-24 px-4 bg-black">
-      <div className="max-w-4xl mx-auto">
-        <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 text-center mb-3">
-          Who I am
-        </p>
-        <h2 className="text-3xl md:text-4xl font-black text-white text-center mb-4">
-          About Me
-        </h2>
-        <p className="text-gray-500 text-center mb-16 text-sm max-w-xl mx-auto">
-          IT graduate from Muntinlupa with a passion for building things that work
-        </p>
+    <section id="about" className="py-24 px-4 bg-[#0d0d0d]">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* Heading */}
+        <div className="text-center mb-14">
+          <p className="text-xs font-semibold tracking-[0.3em] uppercase text-gray-500 mb-3">
+            Who I Am
+          </p>
 
-        <div className="flex flex-col md:flex-row gap-12 items-start mb-20">
-          <div className="flex-shrink-0">
+          <h2 className="text-3xl md:text-5xl font-black text-white mb-4">
+            About Me
+          </h2>
+
+          <p className="text-sm text-gray-500 max-w-xl mx-auto">
+            IT graduate from Muntinlupa, passionate about full-stack
+            development, cloud technologies, and continuous learning.
+          </p>
+        </div>
+
+        {/* Main Card */}
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 hover:border-white/20 transition mb-12">
+          <div className="flex flex-col md:flex-row gap-8 items-start">
+
+            {/* Image */}
             <img
               src="/avatar.jpg"
               alt="Leonardo"
-              className="w-36 h-36 rounded-2xl object-cover border border-white/10"
+              className="w-24 h-24 rounded-2xl object-cover border border-white/10 mx-auto md:mx-0"
             />
-          </div>
-          <div className="space-y-4 text-gray-400 text-sm leading-relaxed">
-            <p>
-              Hi! I am <span className="text-white font-semibold">Leonardo Luis C. Medina</span>, an IT graduate from Pamantasan ng Lungsod ng Muntinlupa. I have experience across cloud, full-stack development, and real-world IT support.
-            </p>
-            <p>
-              I completed training at Accenture and AWS Re/Start, and I built this portfolio from scratch using 30 different technologies. I am eager to learn, adaptable, and a team player.
-            </p>
-            <div className="flex flex-wrap gap-4 pt-2 text-xs text-gray-500">
-              <span>Muntinlupa City, Philippines</span>
-              <span>leonardo.luis.medina99@gmail.com</span>
-              <span>0966-048-7394</span>
-            </div>
-            <div className="flex gap-4 pt-2">
-              <a href="https://github.com/leonardo-luis-medina" target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-white text-black text-xs rounded-full font-medium hover:bg-gray-200 transition">
-                GitHub
-              </a>
-              <a href="https://linkedin.com/in/leonardo-luis-c-medina-9475192ab" target="_blank" rel="noopener noreferrer" className="px-4 py-2 border border-white/20 text-gray-300 text-xs rounded-full hover:bg-white/10 transition">
-                LinkedIn
-              </a>
-              <a href="/cv.pdf" download className="px-4 py-2 border border-white/20 text-gray-300 text-xs rounded-full hover:bg-white/10 transition">
-                Download CV
-              </a>
-            </div>
-          </div>
-        </div>
 
-        {/* Experience Timeline */}
-        <h3 className="text-lg font-black text-white mb-8 uppercase tracking-widest text-sm">Work Experience</h3>
-        <div className="space-y-8 mb-16">
-          {experience.map((exp, i) => (
-            <div key={i} className="flex gap-6 group">
-              <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-white mt-1 flex-shrink-0" />
-                {i < experience.length - 1 && <div className="w-px flex-1 bg-white/10 mt-2" />}
+            {/* Info */}
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-2xl font-black text-white mb-2">
+                Leonardo Luis C. Medina
+              </h3>
+
+              <p className="text-gray-400 text-sm leading-relaxed max-w-2xl mb-5">
+                IT graduate with experience in cloud computing, software
+                engineering, and IT support. Adaptable, eager to learn,
+                and passionate about building modern web applications
+                and scalable solutions.
+              </p>
+
+              {/* Personal Info */}
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start text-xs text-gray-500 mb-5">
+                <span>Muntinlupa City, Philippines</span>
+                <span>•</span>
+                <span>0966-048-7394</span>
               </div>
-              <div className="pb-8">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h4 className="text-white font-bold text-sm">{exp.role}</h4>
-                  <span className="text-gray-600 text-xs">at</span>
-                  <span className="text-gray-400 text-xs">{exp.company}</span>
-                </div>
-                <p className="text-xs text-gray-600 mb-3">{exp.period}</p>
-                <ul className="space-y-1">
-                  {exp.bullets.map((b, j) => (
-                    <li key={j} className="text-xs text-gray-500 flex gap-2">
-                      <span className="text-gray-600 flex-shrink-0">-</span>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
+
+              {/* Buttons */}
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                <a
+                  href="https://github.com/leonardo-luis-medina"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2 bg-white text-black text-sm rounded-full font-medium hover:bg-gray-200 transition"
+                >
+                  GitHub
+                </a>
+
+                <a
+                  href="https://linkedin.com/in/leonardo-luis-c-medina-9475192ab"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2 border border-white/20 text-gray-300 text-sm rounded-full hover:bg-white/10 transition"
+                >
+                  LinkedIn
+                </a>
+
+                <a
+                  href="/cv.pdf"
+                  download
+                  className="px-5 py-2 border border-white/20 text-gray-300 text-sm rounded-full hover:bg-white/10 transition"
+                >
+                  Download CV
+                </a>
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
-        {/* Education */}
-        <h3 className="text-sm font-black text-white mb-6 uppercase tracking-widest">Education</h3>
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-12">
-          <h4 className="text-white font-bold text-sm">Bachelor of Science in Information Technology</h4>
-          <p className="text-gray-400 text-xs mt-1">Pamantasan ng Lungsod ng Muntinlupa | 2019 - 2024</p>
-          <p className="text-gray-600 text-xs mt-1">NBP Reservation, Poblacion, Muntinlupa City</p>
-        </div>
+        {/* Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        {/* Certifications */}
-        <h3 className="text-sm font-black text-white mb-6 uppercase tracking-widest">Certifications</h3>
-        <div className="flex flex-wrap gap-2">
-          {certifications.map((cert) => (
-            <span key={cert} className="text-xs px-3 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-full hover:bg-white/10 hover:text-white transition">
-              {cert}
-            </span>
-          ))}
+          {/* Experience */}
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white mb-6">
+              Experience
+            </h3>
+
+            <div className="space-y-4">
+
+              {/* Experience Card */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-white/20 transition">
+                <h4 className="text-white font-bold text-sm">
+                  Associate Software Engineer
+                </h4>
+
+                <p className="text-gray-500 text-xs mt-1">
+                  Accenture • Jun 2024 - Nov 2024
+                </p>
+
+                <p className="text-gray-400 text-sm mt-3 leading-relaxed">
+                  Completed cloud, software engineering, and ServiceNow
+                  bootcamps while working with Java, Python, and Agile workflows.
+                </p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-white/20 transition">
+                <h4 className="text-white font-bold text-sm">
+                  AWS Re/Start Cloud Training
+                </h4>
+
+                <p className="text-gray-500 text-xs mt-1">
+                  Amazon Web Services • Jul 2025 - Nov 2025
+                </p>
+
+                <p className="text-gray-400 text-sm mt-3 leading-relaxed">
+                  Hands-on training with EC2, S3, IAM, VPC, CloudWatch,
+                  Linux, networking, and Python fundamentals.
+                </p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-white/20 transition">
+                <h4 className="text-white font-bold text-sm">
+                  IT Support Intern
+                </h4>
+
+                <p className="text-gray-500 text-xs mt-1">
+                  PNP Muntinlupa • Jan 2023 - Aug 2023
+                </p>
+
+                <p className="text-gray-400 text-sm mt-3 leading-relaxed">
+                  Provided hardware and technical support, maintained
+                  organizational databases, and supervised over 200 interns.
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Education + Certifications */}
+          <div className="space-y-8">
+
+            {/* Education */}
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white mb-6">
+                Education
+              </h3>
+
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-white/20 transition">
+                <h4 className="text-white font-bold text-sm">
+                  Bachelor of Science in Information Technology
+                </h4>
+
+                <p className="text-gray-500 text-xs mt-2">
+                  Pamantasan ng Lungsod ng Muntinlupa • 2019 - 2024
+                </p>
+              </div>
+            </div>
+
+            {/* Certifications */}
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white mb-6">
+                Certifications
+              </h3>
+
+              <div className="flex flex-wrap gap-3">
+
+                {[
+                  "Civil Service Eligibility (2024)",
+                  "Python Developer - SoloLearn",
+                  "SQL - SoloLearn",
+                  "Java - SoloLearn",
+                  "Web Developer - SoloLearn",
+                ].map((cert, index) => (
+                  <span
+                    key={index}
+                    className="text-xs px-4 py-2 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition"
+                  >
+                    {cert}
+                  </span>
+                ))}
+
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     </section>
