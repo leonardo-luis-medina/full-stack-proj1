@@ -4,25 +4,35 @@ import { prisma } from "@/lib/prisma";
 
 export const projectsRouter = router({
   getAll: publicProcedure.query(async () => {
-    return prisma.project.findMany({
-      orderBy: { order: "asc" },
-    });
+    return prisma.project.findMany({ orderBy: { order: "asc" } });
   }),
 
   create: protectedProcedure
-    .input(
-      z.object({
-        title: z.string().min(1),
-        description: z.string().min(1),
-        imageUrl: z.string().optional(),
-        liveUrl: z.string().optional(),
-        repoUrl: z.string().optional(),
-        tags: z.array(z.string()),
-        order: z.number().default(0),
-      })
-    )
+    .input(z.object({
+      title: z.string().min(1),
+      description: z.string().min(1),
+      imageUrl: z.string().optional(),
+      liveUrl: z.string().optional(),
+      repoUrl: z.string().optional(),
+      tags: z.array(z.string()),
+      order: z.number().default(0),
+    }))
     .mutation(async ({ input }) => {
       return prisma.project.create({ data: input });
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      title: z.string().min(1),
+      description: z.string().min(1),
+      liveUrl: z.string().optional(),
+      repoUrl: z.string().optional(),
+      tags: z.array(z.string()),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      return prisma.project.update({ where: { id }, data });
     }),
 
   delete: protectedProcedure
