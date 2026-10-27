@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 
+type ProjectItem = {
+  id: string;
+  title: string;
+  description: string;
+  liveUrl: string | null;
+  repoUrl: string | null;
+  tags: string[];
+  imageUrl: string | null;
+  order: number;
+};
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -20,41 +31,43 @@ export default function AdminPage() {
   const [imagePreview, setImagePreview] = useState("");
 
   // Edit project state
-  const [editing, setEditing] = useState<
-    {
-      id: string;
-      title: string;
-      description: string;
-      liveUrl: string | null;
-      repoUrl: string | null;
-      tags: string[];
-      imageUrl: string | null;
-      order: number;
-    } | null
-  >(null);
-
+  const [editing, setEditing] = useState<ProjectItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editLiveUrl, setEditLiveUrl] = useState("");
   const [editRepoUrl, setEditRepoUrl] = useState("");
   const [editTags, setEditTags] = useState("");
 
+  // Reorder state
+  const [items, setItems] = useState<ProjectItem[]>([]);
+  const [dirty, setDirty] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
   // Protect admin page
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");
     }
-
-    if (
-      session?.user?.role !== "OWNER" &&
-      status === "authenticated"
-    ) {
+    if (session?.user?.role !== "OWNER" && status === "authenticated") {
       router.push("/");
     }
   }, [session, status, router]);
 
   // Get projects
   const { data, refetch } = trpc.projects.getAll.useQuery();
+
+  // Keep the local list in sync with the server (unless mid-reorder)
+  useEffect(() => {
+    if (data && !dirty) {
+      setItems(
+        [...(data as ProjectItem[])].sort(
+          (a, b) => (a.order ?? 0) - (b.order ?? 0)
+        )
+      );
+    }
+  }, [data, dirty]);
 
   // Create project
   const createProject = trpc.projects.create.useMutation({
@@ -70,7 +83,7 @@ export default function AdminPage() {
     },
   });
 
-  // Update project
+  // Update project (edit modal)
   const updateProject = trpc.projects.update.useMutation({
     onSuccess: () => {
       setEditing(null);
@@ -78,19 +91,18 @@ export default function AdminPage() {
     },
   });
 
+  // Update project (used only for saving the order)
+  const reorderProject = trpc.projects.update.useMutation();
+
   // Delete project
   const deleteProject = trpc.projects.delete.useMutation({
     onSuccess: () => refetch(),
   });
 
   // Handle image selection
-  const handleImageChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
-
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -104,36 +116,27 @@ export default function AdminPage() {
     try {
       let imageUrl = "";
 
-      // Upload image if one was selected
       if (imageFile) {
         const res = await fetch("/api/upload", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             filename: imageFile.name,
             contentType: imageFile.type,
           }),
         });
 
-        if (!res.ok) {
-          throw new Error("Failed to get upload URL");
-        }
+        if (!res.ok) throw new Error("Failed to get upload URL");
 
         const { uploadUrl, publicUrl } = await res.json();
 
         const uploadResponse = await fetch(uploadUrl, {
           method: "PUT",
           body: imageFile,
-          headers: {
-            "Content-Type": imageFile.type,
-          },
+          headers: { "Content-Type": imageFile.type },
         });
 
-        if (!uploadResponse.ok) {
-          throw new Error("Failed to upload image");
-        }
+        if (!uploadResponse.ok) throw new Error("Failed to upload image");
 
         imageUrl = publicUrl;
       }
@@ -148,7 +151,8 @@ export default function AdminPage() {
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean),
-        order: 0,
+        // new projects go to the end; reorder below if you want them first
+        order: items.length,
       });
     } catch (error) {
       console.error("Failed to create project:", error);
@@ -158,9 +162,8 @@ export default function AdminPage() {
   };
 
   // Open edit modal
-  const openEdit = (project: NonNullable<typeof data>[number]) => {
+  const openEdit = (project: ProjectItem) => {
     setEditing(project);
-
     setEditTitle(project.title);
     setEditDescription(project.description);
     setEditLiveUrl(project.liveUrl || "");
@@ -171,10 +174,7 @@ export default function AdminPage() {
   // Update project
   const handleUpdate = () => {
     if (!editing) return;
-
-    if (!editTitle.trim() || !editDescription.trim()) {
-      return;
-    }
+    if (!editTitle.trim() || !editDescription.trim()) return;
 
     updateProject.mutate({
       id: editing.id,
@@ -189,6 +189,52 @@ export default function AdminPage() {
     });
   };
 
+  // ---- Reordering ----
+  const moveItem = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= items.length) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setItems(next);
+    setDirty(true);
+  };
+
+  const resetDrag = () => {
+    setDragIndex(null);
+    setOverIndex(null);
+  };
+
+  const resetOrder = () => {
+    setDirty(false); // effect re-syncs from server data
+  };
+
+  const saveOrder = async () => {
+    setSavingOrder(true);
+    try {
+      await Promise.all(
+        items.map((p, i) =>
+          p.order === i
+            ? Promise.resolve()
+            : reorderProject.mutateAsync({
+                id: p.id,
+                title: p.title,
+                description: p.description,
+                liveUrl: p.liveUrl || undefined,
+                repoUrl: p.repoUrl || undefined,
+                tags: p.tags,
+                order: i,
+              })
+        )
+      );
+      setDirty(false);
+      await refetch();
+    } catch (error) {
+      console.error("Failed to save order:", error);
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
   // Loading state
   if (status === "loading") {
     return (
@@ -199,78 +245,71 @@ export default function AdminPage() {
   }
 
   // Don't render admin content if not authorized
-  if (
-    status !== "authenticated" ||
-    session?.user?.role !== "OWNER"
-  ) {
+  if (status !== "authenticated" || session?.user?.role !== "OWNER") {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] p-8">
-      <div className="max-w-4xl mx-auto">
-
+    <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-8">
+      <div className="mx-auto max-w-4xl">
         {/* Header */}
-        <h1 className="text-3xl font-bold text-white mb-8">
-          Admin Dashboard
-        </h1>
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+          <a
+            href="/"
+            className="rounded-full border border-white/20 px-4 py-2 text-xs text-gray-300 transition hover:bg-white/10"
+          >
+            ← Back to site
+          </a>
+        </div>
 
         {/* Add Project Form */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 mb-8">
-          <h2 className="text-xl font-bold text-white mb-6">
-            Add New Project
-          </h2>
+        <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
+          <h2 className="mb-6 text-xl font-bold text-white">Add New Project</h2>
 
           <div className="space-y-4">
-
-            {/* Title */}
             <input
               type="text"
               placeholder="Project title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
 
-            {/* Description */}
             <textarea
               placeholder="Project description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+              className="w-full resize-none rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
 
-            {/* Live URL */}
             <input
               type="text"
               placeholder="Live URL (optional)"
               value={liveUrl}
               onChange={(e) => setLiveUrl(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
 
-            {/* GitHub URL */}
             <input
               type="text"
               placeholder="GitHub URL (optional)"
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
 
-            {/* Tags */}
             <input
               type="text"
               placeholder="Tags (comma separated e.g. React, Node.js)"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
 
-            {/* Image */}
             <div>
-              <label className="block text-sm text-gray-400 mb-2">
+              <label className="mb-2 block text-sm text-gray-400">
                 Project Image (optional)
               </label>
 
@@ -278,25 +317,22 @@ export default function AdminPage() {
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-white file:text-black hover:file:bg-gray-200"
+                className="w-full text-sm text-gray-400 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:text-black hover:file:bg-gray-200"
               />
 
               {imagePreview && (
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="mt-3 w-48 h-32 object-cover rounded-xl"
+                  className="mt-3 h-32 w-48 rounded-xl object-cover"
                 />
               )}
             </div>
 
-            {/* Add Button */}
             <button
               onClick={handleSubmit}
-              disabled={
-                createProject.isPending || uploading
-              }
-              className="px-6 py-3 bg-white text-black text-sm font-bold rounded-full hover:bg-gray-200 transition disabled:opacity-50"
+              disabled={createProject.isPending || uploading}
+              className="rounded-full bg-white px-6 py-3 text-sm font-bold text-black transition hover:bg-gray-200 disabled:opacity-50"
             >
               {uploading
                 ? "Uploading..."
@@ -307,70 +343,132 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Projects List */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-          <h2 className="text-xl font-bold text-white mb-6">
-            Your Projects
-          </h2>
+        {/* Projects List (drag to reorder) */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-bold text-white">Your Projects</h2>
 
-          {data?.length === 0 && (
-            <p className="text-gray-500 text-sm">
-              No projects yet.
-            </p>
+            {dirty && (
+              <div className="flex gap-2">
+                <button
+                  onClick={resetOrder}
+                  disabled={savingOrder}
+                  className="rounded-full border border-white/20 px-4 py-2 text-xs text-gray-300 transition hover:bg-white/10 disabled:opacity-50"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={saveOrder}
+                  disabled={savingOrder}
+                  className="rounded-full bg-white px-5 py-2 text-xs font-bold text-black transition hover:bg-gray-200 disabled:opacity-50"
+                >
+                  {savingOrder ? "Saving..." : "Save Order"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <p className="mb-6 text-xs text-gray-500">
+            Drag a project by its handle (or use ▲ ▼ on mobile). The top
+            project shows first on the site. Press “Save Order” when done.
+          </p>
+
+          {items.length === 0 && (
+            <p className="text-sm text-gray-500">No projects yet.</p>
           )}
 
-          <div className="space-y-4">
-            {data?.map((project) => (
+          <div className="space-y-3">
+            {items.map((project, i) => (
               <div
                 key={project.id}
-                className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl"
+                draggable
+                onDragStart={(e) => {
+                  setDragIndex(i);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(i));
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (overIndex !== i) setOverIndex(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIndex !== null) moveItem(dragIndex, i);
+                  resetDrag();
+                }}
+                onDragEnd={resetDrag}
+                className={`flex items-center justify-between gap-3 rounded-xl border p-3 transition md:p-4 ${
+                  overIndex === i && dragIndex !== null && dragIndex !== i
+                    ? "border-indigo-400 bg-indigo-400/10"
+                    : "border-white/10 bg-white/5"
+                } ${dragIndex === i ? "opacity-40" : ""}`}
               >
-                {/* Project Information */}
-                <div className="flex items-center gap-4">
+                {/* Handle + info */}
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className="cursor-grab select-none px-1 text-lg text-gray-500 active:cursor-grabbing"
+                    title="Drag to reorder"
+                  >
+                    ⠿
+                  </span>
+
+                  <span className="w-5 shrink-0 text-center font-mono text-xs text-indigo-400">
+                    {i + 1}
+                  </span>
 
                   {project.imageUrl && (
                     <img
                       src={project.imageUrl}
                       alt={project.title}
-                      className="w-16 h-12 object-cover rounded-lg"
+                      draggable={false}
+                      className="h-12 w-16 shrink-0 rounded-lg object-cover"
                     />
                   )}
 
-                  <div>
-                    <h3 className="font-medium text-white text-sm">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-medium text-white">
                       {project.title}
                     </h3>
-
-                    <p className="text-xs text-gray-500">
+                    <p className="truncate text-xs text-gray-500">
                       {project.tags.join(", ")}
                     </p>
                   </div>
                 </div>
 
                 {/* Buttons */}
-                <div className="flex gap-3">
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex flex-col">
+                    <button
+                      onClick={() => moveItem(i, i - 1)}
+                      disabled={i === 0}
+                      className="px-2 text-xs text-gray-400 hover:text-white disabled:opacity-20"
+                      aria-label="Move up"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={() => moveItem(i, i + 1)}
+                      disabled={i === items.length - 1}
+                      className="px-2 text-xs text-gray-400 hover:text-white disabled:opacity-20"
+                      aria-label="Move down"
+                    >
+                      ▼
+                    </button>
+                  </div>
 
-                  {/* Edit */}
                   <button
                     onClick={() => openEdit(project)}
-                    className="text-xs px-4 py-2 border border-white/20 text-gray-300 rounded-full hover:bg-white/10 transition"
+                    className="rounded-full border border-white/20 px-4 py-2 text-xs text-gray-300 transition hover:bg-white/10"
                   >
                     Edit
                   </button>
 
-                  {/* Delete */}
                   <button
-                    onClick={() =>
-                      deleteProject.mutate({
-                        id: project.id,
-                      })
-                    }
+                    onClick={() => deleteProject.mutate({ id: project.id })}
                     disabled={deleteProject.isPending}
-                    className="text-xs px-4 py-2 text-red-400 border border-red-400/20 rounded-full hover:bg-red-400/10 transition disabled:opacity-50"
+                    className="rounded-full border border-red-400/20 px-4 py-2 text-xs text-red-400 transition hover:bg-red-400/10 disabled:opacity-50"
                   >
-                    {deleteProject.isPending
-                      ? "Deleting..."
-                      : "Delete"}
+                    {deleteProject.isPending ? "..." : "Delete"}
                   </button>
                 </div>
               </div>
@@ -382,96 +480,69 @@ export default function AdminPage() {
       {/* Edit Modal */}
       {editing && (
         <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setEditing(null);
-            }
+            if (e.target === e.currentTarget) setEditing(null);
           }}
         >
-          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 w-full max-w-lg">
-
-            <h2 className="text-xl font-bold text-white mb-6">
-              Edit Project
-            </h2>
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#111] p-6 md:p-8">
+            <h2 className="mb-6 text-xl font-bold text-white">Edit Project</h2>
 
             <div className="space-y-4">
-
-              {/* Edit Title */}
               <input
                 type="text"
                 placeholder="Title"
                 value={editTitle}
-                onChange={(e) =>
-                  setEditTitle(e.target.value)
-                }
-                className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
 
-              {/* Edit Description */}
               <textarea
                 placeholder="Description"
                 value={editDescription}
-                onChange={(e) =>
-                  setEditDescription(e.target.value)
-                }
+                onChange={(e) => setEditDescription(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+                className="w-full resize-none rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
 
-              {/* Edit Live URL */}
               <input
                 type="text"
                 placeholder="Live URL (optional)"
                 value={editLiveUrl}
-                onChange={(e) =>
-                  setEditLiveUrl(e.target.value)
-                }
-                className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+                onChange={(e) => setEditLiveUrl(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
 
-              {/* Edit GitHub URL */}
               <input
                 type="text"
                 placeholder="GitHub URL (optional)"
                 value={editRepoUrl}
-                onChange={(e) =>
-                  setEditRepoUrl(e.target.value)
-                }
-                className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+                onChange={(e) => setEditRepoUrl(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
 
-              {/* Edit Tags */}
               <input
                 type="text"
                 placeholder="Tags (comma separated)"
                 value={editTags}
-                onChange={(e) =>
-                  setEditTags(e.target.value)
-                }
-                className="w-full px-4 py-3 border border-white/10 rounded-xl text-sm bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+                onChange={(e) => setEditTags(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
             </div>
 
-            {/* Modal Buttons */}
-            <div className="flex gap-3 mt-6">
-
-              {/* Save */}
+            <div className="mt-6 flex gap-3">
               <button
                 onClick={handleUpdate}
                 disabled={updateProject.isPending}
-                className="px-6 py-2 bg-white text-black text-sm font-bold rounded-full hover:bg-gray-200 transition disabled:opacity-50"
+                className="rounded-full bg-white px-6 py-2 text-sm font-bold text-black transition hover:bg-gray-200 disabled:opacity-50"
               >
-                {updateProject.isPending
-                  ? "Saving..."
-                  : "Save Changes"}
+                {updateProject.isPending ? "Saving..." : "Save Changes"}
               </button>
 
-              {/* Cancel */}
               <button
                 onClick={() => setEditing(null)}
                 disabled={updateProject.isPending}
-                className="px-6 py-2 border border-white/20 text-gray-300 text-sm rounded-full hover:bg-white/10 transition disabled:opacity-50"
+                className="rounded-full border border-white/20 px-6 py-2 text-sm text-gray-300 transition hover:bg-white/10 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -482,4 +553,3 @@ export default function AdminPage() {
     </div>
   );
 }
-

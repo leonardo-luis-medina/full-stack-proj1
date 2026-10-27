@@ -1,134 +1,145 @@
-
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useState } from "react";
+import { useSection, type SectionId } from "@/lib/useSection";
+
+const links: { id: SectionId; label: string }[] = [
+  { id: "hero", label: "Home" },
+  { id: "about-project", label: "This Project" },
+  { id: "projects", label: "Projects" },
+  { id: "skills", label: "Skills" },
+  { id: "about", label: "About" },
+  { id: "contact", label: "Contact" },
+];
 
 export default function Navbar() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { active, go } = useSection();
+
+  const navigate = (id: SectionId) => {
+    go(id);
+    setMenuOpen(false);
+  };
 
   return (
     <>
-      <nav className="fixed top-0 w-full bg-black/80 backdrop-blur-md border-b border-white/10 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <a
-            href="#hero"
-            className="font-black text-lg text-white tracking-tight"
+      <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-black/70 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+          <button
+            onClick={() => navigate("hero")}
+            className="text-lg font-black tracking-tight text-white"
           >
-            LM.
-          </a>
+            LM<span className="text-indigo-400">.</span>
+          </button>
 
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a
-              href="#about-project"
-              className="hover:text-white transition"
-            >
-              This Project
-            </a>
-            <a href="#projects" className="hover:text-white transition">
-              Projects
-            </a>
-            <a href="#skills" className="hover:text-white transition">
-              Skills
-            </a>
-            <a href="#about" className="hover:text-white transition">
-              About
-            </a>
-            <a href="#contact" className="hover:text-white transition">
-              Contact
-            </a>
+          {/* Desktop links */}
+          <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 md:flex">
+            {links.map((l) => (
+              <button
+                key={l.id}
+                onClick={() => navigate(l.id)}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                  active === l.id
+                    ? "bg-white text-black"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
           </div>
 
-          <div className="hidden md:flex items-center gap-3">
+          {/* Desktop auth */}
+          <div className="hidden items-center gap-3 md:flex">
             {session ? (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400">
+              <>
+                <span className="text-xs text-gray-400">
                   {session.user?.name}
                 </span>
-
                 <button
                   onClick={() => signOut()}
-                  className="text-sm px-4 py-2 rounded-full border border-white/20 text-gray-300 hover:bg-white/10 transition"
+                  className="rounded-full border border-white/20 px-4 py-1.5 text-xs text-gray-300 transition hover:bg-white/10"
                 >
                   Logout
                 </button>
-              </div>
+              </>
             ) : (
               <button
                 onClick={() => signIn()}
-                className="text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:bg-gray-200 transition"
+                className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-black transition hover:bg-gray-200"
               >
                 Login
               </button>
             )}
           </div>
 
+          {/* Mobile toggle */}
           <button
-            className="md:hidden text-gray-400"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-300 md:hidden"
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
           >
-            {menuOpen ? "x" : "="}
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {menuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 7h16M4 12h16M4 17h16"
+                />
+              )}
+            </svg>
           </button>
         </div>
 
+        {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden bg-black px-4 pb-4 flex flex-col gap-4 text-sm font-medium text-gray-400 border-t border-white/10">
-            <a
-              href="#about-project"
-              onClick={() => setMenuOpen(false)}
-              className="hover:text-white transition"
-            >
-              This Project
-            </a>
-
-            <a
-              href="#projects"
-              onClick={() => setMenuOpen(false)}
-              className="hover:text-white transition"
-            >
-              Projects
-            </a>
-
-            <a
-              href="#skills"
-              onClick={() => setMenuOpen(false)}
-              className="hover:text-white transition"
-            >
-              Skills
-            </a>
-
-            <a
-              href="#about"
-              onClick={() => setMenuOpen(false)}
-              className="hover:text-white transition"
-            >
-              About
-            </a>
-
-            <a
-              href="#contact"
-              onClick={() => setMenuOpen(false)}
-              className="hover:text-white transition"
-            >
-              Contact
-            </a>
-
-            {session ? (
+          <div className="flex flex-col gap-1 border-t border-white/10 bg-black/95 px-4 pb-4 pt-3 md:hidden">
+            {links.map((l) => (
               <button
-                onClick={() => signOut()}
-                className="text-left text-gray-400"
+                key={l.id}
+                onClick={() => navigate(l.id)}
+                className={`rounded-lg px-3 py-2.5 text-left text-sm font-medium transition ${
+                  active === l.id
+                    ? "bg-white/10 text-white"
+                    : "text-gray-400"
+                }`}
               >
-                Logout
+                {l.label}
               </button>
-            ) : (
-              <button
-                onClick={() => signIn()}
-                className="text-left text-white"
-              >
-                Login
-              </button>
-            )}
+            ))}
+
+            <div className="mt-2 border-t border-white/10 pt-3">
+              {session ? (
+                <button
+                  onClick={() => signOut()}
+                  className="px-3 text-left text-sm text-gray-400"
+                >
+                  Logout ({session.user?.name})
+                </button>
+              ) : (
+                <button
+                  onClick={() => signIn()}
+                  className="px-3 text-left text-sm font-semibold text-white"
+                >
+                  Login
+                </button>
+              )}
+            </div>
           </div>
         )}
       </nav>
@@ -137,11 +148,11 @@ export default function Navbar() {
       {session?.user?.role === "OWNER" && (
         <a
           href="/admin"
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 bg-white text-black text-sm font-bold rounded-full shadow-lg hover:bg-gray-200 hover:scale-105 transition-all duration-200"
+          className="fixed bottom-14 right-4 z-50 flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gray-200"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-4 h-4"
+            className="h-4 w-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -153,11 +164,9 @@ export default function Navbar() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-
           Add Project
         </a>
       )}
     </>
   );
 }
-

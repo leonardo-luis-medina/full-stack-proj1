@@ -29,6 +29,7 @@ export const projectsRouter = router({
       liveUrl: z.string().optional(),
       repoUrl: z.string().optional(),
       tags: z.array(z.string()),
+      order: z.number().optional(), // <-- added: lets the admin page save drag order
     }))
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
